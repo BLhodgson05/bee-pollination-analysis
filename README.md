@@ -27,7 +27,7 @@ dplyr, tidyr, ggplot2, vegan, igraph, ggraph, bipartite, lme4, ggpubr, and other
 
 
 ## Data Availability & Useage Notice 
-All data and code used in this study are available in this repository.
+All data and code used in this study are available in this repository. Note that all records sourced from iNaturalist are subject to their respective copyright and usage terms. Any use of these records must comply with iNaturalist’s licensing and attribution requirements.
 
 ## Contact 
 For any queries, please contact: b.hodgson-2022@hull.ac.uk
