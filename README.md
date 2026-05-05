@@ -1,10 +1,4 @@
-# Title
-
-This repository contains data and R code used to analyse plant–pollinator interactions across UK cities using City Nature Challenge (CNC) observations.
-
-The study investigates overlap in floral resource plant use between Apis mellifera and wild bee species.
-
-## Repository Contents
+# Repository Contents
 
 Raw iNaturalist data and the cleaned dataset used for analysis can be found in the Releases section of this repository.
 R scripts and output are located in the R analysis folder.
@@ -23,7 +17,7 @@ To reproduce the analysis:
 4. Run the script in full
 
 Required R packages include:
-dplyr, tidyr, ggplot2, vegan, igraph, ggraph, bipartite, lme4, ggpubr, and others
+dplyr, tidyr, ggplot2, vegan, igraph, ggraph, bipartite, lme4 and others.
 
 
 ## Data Availability & Useage Notice 
@@ -31,4 +25,3 @@ All data and code used in this study are available in this repository. Note that
 
 ## Contact 
 For any queries, please contact: b.hodgson-2022@hull.ac.uk
-
