@@ -1,4 +1,4 @@
-# Repository Contents
+## Repository Contents
 
 Raw iNaturalist data and the cleaned dataset used for analysis can be found in the Releases section of this repository.
 R scripts and output are located in the R analysis folder.
