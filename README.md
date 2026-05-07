@@ -12,16 +12,15 @@ All analyses were conducted in R.
 ## Reproducibility
 To reproduce the analysis:
 1. Download the repository
-2. Open `+.R` in RStudio
+2. Open `analysis.R` in RStudio
 3. Ensure required packages are installed (see below)
 4. Run the script in full
 
 Required R packages include:
 dplyr, tidyr, ggplot2, vegan, igraph, ggraph, bipartite, lme4 and others.
 
-
 ## Data Availability & Useage Notice 
-All data and code used in this study are available in this repository. Note that all records sourced from iNaturalist are subject to their respective copyright and usage terms. Any use of these records must comply with iNaturalist’s licensing and attribution requirements.
+All data and code used in this study are available in this repository. Note that all records data sourced from iNaturalist are subject to their respective copyright and usage terms and must be used inaccordance with iNaturalist's guidelines. 
 
 ## Contact 
 For any queries, please contact: b.hodgson-2022@hull.ac.uk
