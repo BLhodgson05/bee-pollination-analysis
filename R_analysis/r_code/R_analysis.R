@@ -1105,7 +1105,7 @@ pa_plot
 
 # save
 ggsave(
-  filename = "matrix_overall_NA_other.png",
+  filename = "matrix_overall.png",
   plot = pa_plot,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 27,
@@ -1182,7 +1182,7 @@ names(plots) <- names(city_list)
 
 for (city in names(plots)) {
   ggsave(
-    paste0("matrix_", city, "_same_layout_NA_other.png"),
+    paste0("matrix_", city, "_same_layout.png"),
     plot = plots[[city]],
     path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
     width = 27,
