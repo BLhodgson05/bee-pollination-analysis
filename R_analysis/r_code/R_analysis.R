@@ -275,54 +275,7 @@ write_xlsx(
 
 
 ### -------------------------------------
-# (1C) Plant diversity indices
-### -------------------------------------
-
-plant_counts <- dat %>%
-  count(plant) %>%
-  pull(n)
-
-vegan::diversity(plant_counts, index = "shannon")
-# 2.870622
-
-dat %>%
-  count(bee_type, plant) %>%
-  group_by(bee_type) %>%
-  summarise(
-    shannon = vegan::diversity(n, index = "shannon"),
-    .groups = "drop"
-  )
-# honey - 2.13
-# wild - 2.99
-
-plant_counts <- dat %>%
-  count(plant) %>%
-  pull(n)
-
-vegan::diversity(plant_counts, index = "simpson")
-# 0.8736238
-
-dat %>%
-  count(bee_type, plant) %>%
-  group_by(bee_type) %>%
-  summarise(
-    simpson = vegan::diversity(n, index = "simpson"),
-    .groups = "drop"
-  )
-# honey - 0.763
-# wild - 0.898
-
-dat %>%
-  group_by(bee_type) %>%
-  summarise(
-    richness = n_distinct(plant)
-  )
-# honey - 42
-# wild - 81
-
-
-### -------------------------------------
-# (1D) Top 10 wild bees + Apis mellifera
+# (1C) Top 10 wild bees + Apis mellifera
 ### -------------------------------------
 
 # For analysis only keep top 10 bees
@@ -347,41 +300,132 @@ dat_top_bees %>%
 
 
 ### -------------------------------------
-# (1E) All plants dataset (appendix figures)
+# (1D) Main figures/analyses: Top 20 plants + Other
 ### -------------------------------------
 
-rare_plants <- dat_top_bees %>%
-  count(plant) %>%
-  filter(n <= 2) %>%
-  pull(plant)
+# Internal names for the two distinct "Other" categories
+other_main <- "Other_main"
+other_appendix <- "Other_appendix"
 
-dat_all_plants <- dat_top_bees %>%
-  mutate(
-    plant = ifelse(plant %in% rare_plants, "Other", plant)
-  )
-
-
-### -------------------------------------
-# (1F) Top 20 plants dataset (analysis dataset / main figures)
-### -------------------------------------
-
+# Top 20 associated plant genera among Apis mellifera + top 10 wild bees
 top20_plants <- dat_top_bees %>%
   count(plant, sort = TRUE) %>%
   slice_head(n = 20) %>%
   pull(plant)
 
-dat_top20_plants <- dat_top_bees %>%
+# Main analysis dataset:
+# top 20 genera retained individually;
+# all remaining genera pooled into the main "Other" category
+dat_main_plants <- dat_top_bees %>%
   mutate(
-    plant = ifelse(plant %in% top20_plants, plant, "Other")
+    plant = ifelse(
+      plant %in% top20_plants,
+      plant,
+      other_main
+    )
   )
 
-# Check plant groups
+# Quick check
+dat_main_plants %>%
+  count(plant, sort = TRUE)
 
-# Check number of plant groups should be 20
+n_distinct(dat_main_plants$plant)
 
-# Percent of original records retained by top 10 wild bees + Apis mellifera
 
-# Unique interactions after grouping plants into top 19 + Other
+### -------------------------------------
+# (1E) Appendix figures: All plants except singletons/doubletons + Other
+### -------------------------------------
+
+# Rare plant genera for appendix-level figures only
+rare_plants_appendix <- dat_top_bees %>%
+  count(plant) %>%
+  filter(n <= 2) %>%
+  pull(plant)
+
+# Appendix dataset:
+# all plant genera retained except singletons/doubletons;
+# rare genera pooled into a distinct appendix "Other" category
+dat_appendix_plants <- dat_top_bees %>%
+  mutate(
+    plant = ifelse(
+      plant %in% rare_plants_appendix,
+      other_appendix,
+      plant
+    )
+  )
+
+# Quick check
+dat_appendix_plants %>%
+  count(plant, sort = TRUE)
+
+n_distinct(dat_appendix_plants$plant)
+
+
+### -------------------------------------
+# (1F) Final grouping checks
+### -------------------------------------
+
+# Check main Other and appendix Other are distinct
+main_other_check <- dat_main_plants %>%
+  filter(plant == other_main) %>%
+  summarise(
+    other_category = other_main,
+    n_interactions = n()
+  )
+
+appendix_other_check <- dat_appendix_plants %>%
+  filter(plant == other_appendix) %>%
+  summarise(
+    other_category = other_appendix,
+    n_interactions = n()
+  )
+
+main_other_check
+appendix_other_check
+
+# Check original plant genera pooled into each Other category
+dat_top_bees %>%
+  filter(!plant %in% top20_plants) %>%
+  summarise(
+    main_other_interactions = n(),
+    main_other_original_genera = n_distinct(plant)
+  )
+
+dat_top_bees %>%
+  filter(plant %in% rare_plants_appendix) %>%
+  summarise(
+    appendix_other_interactions = n(),
+    appendix_other_original_genera = n_distinct(plant)
+  )
+
+# Percent of original cleaned records retained by top 10 wild bees + Apis mellifera
+top_bees_retention <- dat %>%
+  summarise(
+    total_cleaned_interactions = n(),
+    retained_top_bee_interactions = sum(
+      bee == "Apis mellifera" | bee %in% top10_wild_bees
+    ),
+    percent_retained = round(
+      retained_top_bee_interactions / total_cleaned_interactions * 100,
+      2
+    )
+  )
+
+top_bees_retention
+
+# Main dataset: unique interactions after grouping into top 20 + Other_main
+dat_main_plants %>%
+  summarise(
+    n_plant_groups = n_distinct(plant),
+    unique_grouped_interactions = n_distinct(bee, plant)
+  )
+
+# Appendix dataset: unique interactions after grouping singletons/doubletons into Other_appendix
+dat_appendix_plants %>%
+  summarise(
+    n_plant_groups = n_distinct(plant),
+    unique_grouped_interactions = n_distinct(bee, plant)
+  )
 
 
 ### ============================================================================
@@ -410,13 +454,6 @@ overlap_plants <- length(intersect(plants_apis, plants_wild))
 area_apis
 area_wild
 overlap_plants
-
-cairo_pdf(
-  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/venn_diagram.pdf",
-  width = 5,
-  height = 3.5,
-  family = "Segoe UI"
-)
 
 png(
   "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/venn_diagram.png",
@@ -478,7 +515,7 @@ bee_order <- c(
 # Plant labels for plots, in italics bar Other
 make_plant_labels <- function(plant_order) {
   ifelse(
-    plant_order == "Other",
+    plant_order %in% c(other_main, other_appendix),
     "Other",
     paste0("italic('", plant_order, "')")
   )
@@ -545,10 +582,12 @@ similarity_plot <- ggplot(similarity_results, aes(sorensen_similarity, fct_reord
         legend.position = "none",
         plot.margin = margin(10, 20, 10, 10))
 
+# View
 similarity_plot
 
+# Save as images
 ggsave(
-  filename = "similarity_plot_two_column_width_NA_removed.png",
+  filename = "similarity_plot_two_column_width.png",
   plot = similarity_plot,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 7.09,
@@ -558,7 +597,7 @@ ggsave(
 ) 
 
 ggsave(
-  filename = "similarity_plot_one_column_width_NA_removed.png",
+  filename = "similarity_plot_one_column_width.png",
   plot = similarity_plot,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 3.54,
@@ -578,7 +617,7 @@ ggsave(
 ### -------------------------------------
 
 # main result
-mat_main <- dat_top20_plants %>%
+mat_main <- dat_main_plants %>%
   count(plant, bee) %>%
   pivot_wider(names_from = bee, values_from = n, values_fill = 0) %>%
   column_to_rownames("plant") %>%
@@ -594,7 +633,7 @@ chi_main
 ### -------------------------------------
 
 # appendix result 
-mat_all <- dat_all_plants %>%
+mat_all <- dat_appendix_plants %>%
   count(plant, bee) %>%
   pivot_wider(names_from = bee, values_from = n, values_fill = 0) %>%
   column_to_rownames("plant") %>%
@@ -659,12 +698,14 @@ residual_plot_main <- ggplot(
     axis.title.y = element_text(size = 60, face = "bold",margin = margin(r = 12)), 
     legend.title = element_text(size = 50, hjust = 0.5),
     legend.text = element_text(size = 50, hjust = 0.5)
-)
+  )
 
+# view
 residual_plot_main
 
+# save
 ggsave(
-  filename = "residual_heatmap_main_NA_removed.png",
+  filename = "residual_heatmap_main.png",
   plot = residual_plot_main,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 7.1,
@@ -713,10 +754,12 @@ residual_plot_all <- ggplot(
     legend.text = element_text(size = 50, hjust = 0.5)
   )
 
+# view
 residual_plot_all
 
+# save
 ggsave(
-  filename = "residual_heatmap_all_NA_removed.png",
+  filename = "residual_heatmap_all.png",
   plot = residual_plot_all,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 7.1,
@@ -786,10 +829,10 @@ fisher_table <- pairwise_results %>%
 ### -------------------------------------
 
 # Network dataset for networks the same as main analysis dataset
-dat_network <- dat_top20_plants
+dat_network <- dat_main_plants
 
 # Build plant x bee interaction matrix
-net_web <- dat_top20_plants %>%
+net_web <- dat_main_plants %>%
   count(plant, bee, name = "edge.weight") %>%
   pivot_wider(
     names_from = bee,
@@ -804,9 +847,9 @@ plant_order <- order(rowSums(net_web), decreasing = TRUE)
 net_web_weight <- net_web[plant_order, ]
 
 # Move "Other" to bottom
-if ("Other" %in% rownames(net_web_weight)) {
+if (other_main %in% rownames(net_web_weight)) {
   net_web_weight <- net_web_weight[
-    c(setdiff(rownames(net_web_weight), "Other"), "Other"),
+    c(setdiff(rownames(net_web_weight), other_main), other_main),
   ]
 }
 
@@ -820,17 +863,29 @@ net_web_weight <- net_web_weight[
 # This does not change the network
 plant_order_network <- rownames(net_web_weight)
 bee_order_network <- colnames(net_web_weight)
+
+# Create plotting copy only:
+# keep net_web_weight unchanged for analysis/checks,
+# but display Other_main as "Other" in the network figure
+net_web_weight_plot <- net_web_weight
+
+rownames(net_web_weight_plot)[
+  rownames(net_web_weight_plot) == other_main
+] <- "Other"
+
 ### -------------------------------------
 # (8B - i) Bees LEFT, plants RIGHT
 ### -------------------------------------
 
 # Do NOT transpose
-net_web_plot <- net_web_weight
+net_web_plot <- net_web_weight_plot
 
 # Plant colours (left)
 lower_color <- rep("black", nrow(net_web_plot))
 names(lower_color) <- rownames(net_web_plot)
-lower_color["Other"] <- "grey80"
+if ("Other" %in% names(lower_color)) {
+  lower_color["Other"] <- "grey80"
+}
 
 # Bee colours (right)
 higher_color <- bee_cols[colnames(net_web_plot)]
@@ -847,7 +902,7 @@ n_distinct(dat_network$bee)
 
 # Save as PDF
 pdf(
-  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2_NA_removed.pdf",
+  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2.pdf",
   width = 4,
   height = 8
 )
@@ -857,7 +912,7 @@ par(
   mar = c(0, 0, 0, 0),   # remove ALL margins
   xaxs = "i",            # no x padding
   yaxs = "i",            # no y padding
-  bg = "transparent"
+  bg = "white"
 )
 
 plotweb(
@@ -876,9 +931,10 @@ plotweb(
 
 dev.off()
 
+# convert pdfs to images
 pdf_convert(
-  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2_NA_removed.pdf",
-  filenames = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2_highres_NA_removed.png",
+  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2.pdf",
+  filenames = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2_highres.png",
   dpi = 1200
 )
 
@@ -888,7 +944,7 @@ pdf_convert(
 ### -------------------------------------
 
 # Transpose for plotweb
-net_web_plot <- t(net_web_weight)
+net_web_plot <- t(net_web_weight_plot)
 
 # Bee colours (left)
 lower_color <- bee_cols[rownames(net_web_plot)]
@@ -899,11 +955,13 @@ lower_color["Apis mellifera"] <- "transparent"
 # Plant colours (right)
 higher_color <- rep("black", ncol(net_web_plot))
 names(higher_color) <- colnames(net_web_plot)
-higher_color["Other"] <- "grey80"
+if ("Other" %in% names(higher_color)) {
+  higher_color["Other"] <- "grey80"
+}
 
 # Save as PDF
 pdf(
-  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1_NA_removed.pdf",
+  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1.pdf",
   width = 4,
   height = 8
 )
@@ -913,7 +971,7 @@ par(
   mar = c(0, 0, 0, 0),   
   xaxs = "i",           
   yaxs = "i",            
-  bg = "transparent"
+  bg = "white"
 )
 
 plotweb(
@@ -934,21 +992,10 @@ dev.off()
 
 # convert pdfs to images to edit in powerpoint
 pdf_convert(
-  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1_NA_removed.pdf",
-  filenames = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1_highres_NA_removed.png",
+  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1.pdf",
+  filenames = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1_highres.png",
   dpi = 1200
 )
-
-library(magick)
-
-img1 <- image_read("C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1_highres_NA_removed.png")
-img2 <- image_read("C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2_highres_NA_removed.png")
-
-img1 <- image_transparent(img1, "white")
-img2 <- image_transparent(img2, "white")
-
-image_write(img1, "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_1_transparent_NA_removed.png")
-image_write(img2, "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/network_2_transparent_NA_removed.png")
 
 
 ### ============================================================================
@@ -961,7 +1008,7 @@ image_write(img2, "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data a
 ### -------------------------------------
 
 # Build presence/absence matrix
-pa_matrix <- dat_all_plants %>%
+pa_matrix <- dat_appendix_plants %>%
   distinct(plant, bee) %>%
   mutate(presence = 1) %>%
   pivot_wider(
@@ -972,20 +1019,28 @@ pa_matrix <- dat_all_plants %>%
   column_to_rownames("plant") %>%
   as.matrix()
 
-# Use network order first, then add extra dat_all_plants genera after
+# Use network order first, then add extra dat_appendix_plants genera after
 all_matrix_plants <- rownames(pa_matrix)
 
-extra_plants <- setdiff(all_matrix_plants, plant_order_network)
+main_plants_no_other <- setdiff(plant_order_network, other_main)
 
-extra_plants_ordered <- dat_all_plants %>%
-  filter(plant %in% extra_plants, plant != "Other") %>%
+extra_plants <- setdiff(
+  all_matrix_plants,
+  c(main_plants_no_other, other_appendix)
+)
+
+extra_plants_ordered <- dat_appendix_plants %>%
+  filter(
+    plant %in% extra_plants,
+    plant != other_appendix
+  ) %>%
   count(plant, sort = TRUE) %>%
   pull(plant)
 
 plant_order_overall <- c(
-  setdiff(plant_order_network, "Other"),
+  main_plants_no_other,
   extra_plants_ordered,
-  "Other"
+  other_appendix
 )
 
 plant_order_overall <- plant_order_overall[
@@ -1045,10 +1100,12 @@ pa_plot <- ggplot(pa_df, aes(x = plant, y = bee, fill = fill_type)) +
     legend.position = "none"
   )
 
+# view
 pa_plot
 
+# save
 ggsave(
-  filename = "matrix_overall_NA_removed.png",
+  filename = "matrix_overall_NA_other.png",
   plot = pa_plot,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 27,
@@ -1115,7 +1172,7 @@ make_pa_plot_same_layout <- function(df, city_name,
     )
 }
 
-city_list <- split(dat_all_plants, dat_all_plants$city)
+city_list <- split(dat_appendix_plants, dat_appendix_plants$city)
 
 plots <- lapply(names(city_list), function(city) {
   make_pa_plot_same_layout(city_list[[city]], city)
@@ -1125,7 +1182,7 @@ names(plots) <- names(city_list)
 
 for (city in names(plots)) {
   ggsave(
-    paste0("matrix_", city, "_same_layout_NA_removed.png"),
+    paste0("matrix_", city, "_same_layout_NA_other.png"),
     plot = plots[[city]],
     path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
     width = 27,
@@ -1140,7 +1197,7 @@ for (city in names(plots)) {
 # (10) Bubble plot
 ### ============================================================================
 
-bubble_data <- dat_all_plants %>%
+bubble_data <- dat_appendix_plants %>%
   mutate(
     bee_type = ifelse(
       bee == "Apis mellifera",
@@ -1179,10 +1236,12 @@ bubble_plot <- ggplot(bubble_data, aes(x = plant, y = bee)) +
     legend.position = "none"
   )
 
+# check
 bubble_plot
 
+# save as image
 ggsave(
-  filename = "bubble_plot_A4_landscape_NA_removed.png",
+  filename = "bubble_plot_A4_landscape.png",
   plot = bubble_plot,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 27,
