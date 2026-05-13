@@ -568,22 +568,47 @@ similarity_results <- lapply(top10_wild_bees, function(sp) {
 
 similarity_results
 
-# plot
-similarity_plot <- ggplot(similarity_results, aes(sorensen_similarity, fct_reorder(wild_bee, sorensen_similarity), fill = wild_bee)) +
+# Two-column plot
+similarity_plot <- ggplot(similarity_results,
+  aes(sorensen_similarity, fct_reorder(wild_bee, sorensen_similarity), fill = wild_bee)) +
   geom_col(width = 0.65, colour = "black", linewidth = 0.25) +
   geom_text(aes(label = sprintf("%.2f", sorensen_similarity)), hjust = -0.15, size = 18, family = "Segoe UI") +
   scale_x_continuous(limits = c(0, 0.60), breaks = seq(0, 0.6, 0.1), expand = expansion(mult = c(0, 0.02))) +
   scale_fill_manual(values = bee_cols) +
-  labs(x = expression("Plant-use similarity with " * italic("Apis mellifera") * " (Sørensen index)"), y = NULL) +
+  labs(x = expression("Floral resource-use overlap with " * italic("Apis mellifera") * " (Sørensen index)"),y = NULL) +
   theme_classic(base_family = "Segoe UI") +
-  theme(axis.text.y = element_text(face = "italic", colour = "black", size = 50),
-        axis.text.x = element_text(colour = "black", size = 50),
-        axis.title.x = element_text(size = 50, margin = margin(t = 10)),
-        legend.position = "none",
-        plot.margin = margin(10, 20, 10, 10))
+  theme(
+    axis.text.y = element_text(face = "italic", colour = "black", size = 50),
+    axis.text.x = element_text(colour = "black", size = 50),
+    axis.title.x = element_text(size = 50, margin = margin(t = 10)),
+    legend.position = "none",
+    plot.margin = margin(10, 20, 10, 10)
+  )
 
 # View
 similarity_plot
+
+
+# One-column plot with two-line x-axis title
+similarity_plot_onecol <- ggplot(similarity_results,
+  aes(sorensen_similarity, fct_reorder(wild_bee, sorensen_similarity), fill = wild_bee)) +
+  geom_col(width = 0.65, colour = "black", linewidth = 0.25) +
+  geom_text(aes(label = sprintf("%.2f", sorensen_similarity)), hjust = -0.15, size = 18, family = "Segoe UI") +
+  scale_x_continuous(limits = c(0, 0.60), breaks = seq(0, 0.6, 0.1), expand = expansion(mult = c(0, 0.02))) +
+  scale_fill_manual(values = bee_cols) +
+  labs(x = expression(atop("Floral resource-use overlap with " * italic("Apis mellifera"),"(Sørensen index)")),y = NULL) +
+  theme_classic(base_family = "Segoe UI") +
+  theme(
+    axis.text.y = element_text(face = "italic", colour = "black", size = 50),
+    axis.text.x = element_text(colour = "black", size = 50),
+    axis.title.x = element_text(size = 42, margin = margin(t = 12)),
+    legend.position = "none",
+    plot.margin = margin(10, 20, 45, 10)
+  )
+
+# View
+similarity_plot_onecol
+
 
 # Save as images
 ggsave(
@@ -594,18 +619,17 @@ ggsave(
   height = 4.5,
   units = "in",
   dpi = 600
-) 
+)
 
 ggsave(
   filename = "similarity_plot_one_column_width.png",
-  plot = similarity_plot,
+  plot = similarity_plot_onecol,
   path = "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis",
   width = 3.54,
-  height = 4.5,
+  height = 4.8,
   units = "in",
   dpi = 600
 )
-
 
 ### ============================================================================
 # (5) Chi-square
@@ -627,6 +651,10 @@ chi_main <- chisq.test(mat_main, simulate.p.value = TRUE)
 chi_main
 # X-squared = 1074.3, df = NA, p-value = 0.0004998
 
+set.seed(123)
+chi_main <- chisq.test(mat_main, simulate.p.value = TRUE, B = 10000)
+chi_main 
+# X-squared = 1006.6, df = NA, p-value = 9.999e-05
 
 ### -------------------------------------
 # (5B) X2 - All plants (APPENDIX)
@@ -639,10 +667,10 @@ mat_all <- dat_appendix_plants %>%
   column_to_rownames("plant") %>%
   as.matrix()
 
-chi_all <- chisq.test(mat_all, simulate.p.value = TRUE)
+set.seed(123)
+chi_all <- chisq.test(mat_all, simulate.p.value = TRUE, B = 10000)
 chi_all
-# X-squared = 1466.2, df = NA, p-value = 0.0004998
-
+# X-squared = 1331.5, df = NA, p-value = 9.999e-05
 
 ### ============================================================================
 # (6) Residuals
@@ -766,6 +794,127 @@ ggsave(
   height = 8,   # taller for readability
   units = "in",
   dpi = 600
+)
+
+### -------------------------------------
+# (6C) Residual tables for checking/export
+### -------------------------------------
+
+# Folder for outputs
+output_dir <- "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis"
+
+# Display labels for Other categories
+main_other_label <- "Other"
+appendix_other_label <- "Other"
+
+# Main residual table: long format, ordered by bee species and residual strength
+residual_table_main_long <- res_df_main %>%
+  mutate(
+    plant_display = ifelse(plant == other_main, main_other_label, plant),
+    bee = factor(bee, levels = bee_order_residual),
+    std_residual = round(std_residual, 3)
+  ) %>%
+  arrange(bee, desc(std_residual)) %>%
+  select(
+    Bee = bee,
+    Plant = plant_display,
+    `Standardised residual` = std_residual
+  )
+
+# Appendix residual table: long format, ordered by bee species and residual strength
+residual_table_all_long <- res_df_all %>%
+  mutate(
+    plant_display = ifelse(plant == other_appendix, appendix_other_label, plant),
+    bee = factor(bee, levels = bee_order_residual),
+    std_residual = round(std_residual, 3)
+  ) %>%
+  arrange(bee, desc(std_residual)) %>%
+  select(
+    Bee = bee,
+    Plant = plant_display,
+    `Standardised residual` = std_residual
+  )
+
+# Main residual table: wide format, ordered like the main heatmap
+residual_table_main_wide <- res_df_main %>%
+  mutate(
+    plant = factor(plant, levels = plant_order_main),
+    bee = factor(bee, levels = bee_order_residual),
+    plant_display = ifelse(as.character(plant) == other_main, main_other_label, as.character(plant)),
+    std_residual = round(std_residual, 3)
+  ) %>%
+  select(plant, plant_display, bee, std_residual) %>%
+  arrange(plant) %>%
+  select(-plant) %>%
+  pivot_wider(
+    names_from = bee,
+    values_from = std_residual
+  ) %>%
+  rename(Plant = plant_display) %>%
+  select(Plant, all_of(bee_order_residual))
+
+# Appendix residual table: wide format, ordered like the appendix heatmap
+residual_table_all_wide <- res_df_all %>%
+  mutate(
+    plant = factor(plant, levels = plant_order_all),
+    bee = factor(bee, levels = bee_order_residual),
+    plant_display = ifelse(as.character(plant) == other_appendix, appendix_other_label, as.character(plant)),
+    std_residual = round(std_residual, 3)
+  ) %>%
+  select(plant, plant_display, bee, std_residual) %>%
+  arrange(plant) %>%
+  select(-plant) %>%
+  pivot_wider(
+    names_from = bee,
+    values_from = std_residual
+  ) %>%
+  rename(Plant = plant_display) %>%
+  select(Plant, all_of(bee_order_residual))
+
+# Strongest main residuals, ordered by absolute residual strength
+strongest_residuals_main <- res_df_main %>%
+  mutate(
+    plant = ifelse(plant == other_main, main_other_label, plant),
+    abs_residual = abs(std_residual),
+    std_residual = round(std_residual, 3),
+    abs_residual = round(abs_residual, 3)
+  ) %>%
+  arrange(desc(abs_residual)) %>%
+  select(
+    Bee = bee,
+    Plant = plant,
+    `Standardised residual` = std_residual,
+    `Absolute residual` = abs_residual
+  )
+
+# Strongest appendix residuals, ordered by absolute residual strength
+strongest_residuals_all <- res_df_all %>%
+  mutate(
+    plant = ifelse(plant == other_appendix, appendix_other_label, plant),
+    abs_residual = abs(std_residual),
+    std_residual = round(std_residual, 3),
+    abs_residual = round(abs_residual, 3)
+  ) %>%
+  arrange(desc(abs_residual)) %>%
+  select(
+    Bee = bee,
+    Plant = plant,
+    `Standardised residual` = std_residual,
+    `Absolute residual` = abs_residual
+  )
+
+
+# Export to Excel workbook
+write_xlsx(
+  list(
+    "Main residuals wide" = residual_table_main_wide,
+    "Appendix residuals wide" = residual_table_all_wide,
+    "Main residuals long" = residual_table_main_long,
+    "Appendix residuals long" = residual_table_all_long,
+    "Strongest main residuals" = strongest_residuals_main,
+    "Strongest appendix residuals" = strongest_residuals_all
+  ),
+  "C:/Users/770551/OneDrive - hull.ac.uk/Aa. Dissertation/Data and Analysis/residual_tables.xlsx"
 )
 
 
